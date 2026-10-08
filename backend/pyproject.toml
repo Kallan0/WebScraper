@@ -1,0 +1,23 @@
+[project]
+name = "ai-web-scraper-backend"
+version = "0.1.0"
+description = "Deterministic webpage extraction with Groq summarization"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi[standard]>=0.142.4,<0.143",
+    "httpx>=0.28.1,<0.29",
+    "beautifulsoup4>=4.13,<5",
+    "trafilatura>=2,<3",
+    "pydantic-settings>=2.10,<3",
+]
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "pytest-asyncio>=0.25,<2"]
+
+[tool.fastapi]
+entrypoint = "app.main:app"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+asyncio_mode = "auto"
+testpaths = ["tests"]

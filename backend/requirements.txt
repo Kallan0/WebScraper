@@ -1,0 +1,6 @@
+# uv.lock is the reproducible source of dependency versions.
+fastapi[standard]>=0.142.4,<0.143
+httpx>=0.28.1,<0.29
+beautifulsoup4>=4.13,<5
+trafilatura>=2,<3
+pydantic-settings>=2.10,<3
