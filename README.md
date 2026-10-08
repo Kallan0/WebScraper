@@ -26,7 +26,7 @@ npm run dev
 
 Open http://localhost:5173. API docs: http://127.0.0.1:8000/docs. Health check: http://127.0.0.1:8000/api/health.
 
-The Vite development server proxies /api to the backend. The frontend never receives the Groq key. Production serving requires routing /api to FastAPI separately; the Vite proxy is for local development.
+The Vite development server proxies /api to the backend. The frontend never receives the Groq key. For a separately deployed frontend, set VITE_API_BASE_URL to the backend origin. The Vite proxy is for local development.
 
 ## Configuration
 
@@ -88,7 +88,7 @@ Failures use {"success": false, "error": "Human-readable message"}: 400 for inva
 - Page text is treated as untrusted source material in a server-controlled prompt.
 - Static HTML only: no browser rendering, authenticated pages, PDFs, or paywall bypass.
 - Classification is heuristic and may mislabel pages. Model summaries should be checked against the source.
-- This is a local MVP; authentication, usage limits, caching, history, background queues, and production deployment are outside this iteration.
+- This is a local MVP; authentication, usage limits, caching, history, background queues, are outside this iteration.
 
 ## Layout
 
@@ -101,3 +101,46 @@ Failures use {"success": false, "error": "Human-readable message"}: 400 for inva
 ## Optional framework skills
 
 To install current FastAPI framework skills for future development, run `uvx library-skills` interactively and select the Codex target. See [Library Skills](https://library-skills.io/).
+
+## Deploy backend on Render
+
+Create or update a Python Web Service with these settings:
+
+| Setting | Value |
+| --- | --- |
+| Root Directory | backend |
+| Build Command | uv sync --active --locked --no-dev |
+| Start Command | uv run --active --no-sync uvicorn app.main:app --host 0.0.0.0 --port $PORT |
+| Health Check Path | /api/health |
+
+The committed .python-version files select Python 3.13. If the service already sets PYTHON_VERSION to an older version, remove that variable so the version file takes effect, or set a fully qualified supported 3.13.x version. Render's PYTHON_VERSION variable overrides the file. Do not use fastapi dev in production. The --active flags use Render's active environment consistently and avoid the conflicting VIRTUAL_ENV warning.
+
+Set these variables in the backend service's Render Environment page:
+
+~~~env
+GROQ_API_KEY=<your private Groq key>
+GROQ_MODEL=openai/gpt-oss-20b
+FRONTEND_URL=https://web-scraper-pearl-iota.vercel.app
+~~~
+
+Local backend/.env is ignored by Git and is not uploaded to Render. Add the secret in Render instead. Push the version files and code changes, then redeploy. Once live, check https://webscraper-e54n.onrender.com/api/health.
+
+See [Render Python versions](https://render.com/docs/python-version) and [Render FastAPI deployment](https://render.com/docs/deploy-fastapi).
+
+## Deploy frontend
+
+For a Render Static Site, use Root Directory frontend, Build Command npm ci && npm run build, Publish Directory dist, and NODE_VERSION=24. Other static hosts can use the same build command and dist output directory.
+
+Set this in the frontend host's environment settings before building:
+
+~~~env
+VITE_API_BASE_URL=https://webscraper-e54n.onrender.com
+~~~
+
+Use the backend origin only: do not append /api, /docs or /api/summarize. Set backend FRONTEND_URL to the exact frontend origin including https://, without a path. Redeploy the backend after changing its variables. Rebuild and redeploy the frontend whenever VITE_API_BASE_URL changes because [Vite embeds it at build time](https://vite.dev/guide/env-and-mode). Never put GROQ_API_KEY in frontend environment variables.
+
+### This project's Vercel frontend
+
+For https://web-scraper-pearl-iota.vercel.app, set Vercel Root Directory to frontend, Framework Preset to Vite, Build Command to npm run build, Output Directory to dist, and use Node.js 24. The committed frontend/.env.production points to https://webscraper-e54n.onrender.com. If Vercel also has VITE_API_BASE_URL set in its dashboard, make sure it matches that origin; the host variable overrides the file. Redeploy Vercel after pushing these changes.
+
+On the Render backend, set FRONTEND_URL=https://web-scraper-pearl-iota.vercel.app in the Environment page. No trailing path is needed. Redeploy after changing it.

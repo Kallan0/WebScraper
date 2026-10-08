@@ -8,3 +8,6 @@ __pycache__/
 node_modules/
 dist/
 *.pyc
+
+# Public frontend API origin; contains no secrets.
+!frontend/.env.production

@@ -1,7 +1,9 @@
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
+
 export async function summarizeUrl(url, signal) {
   let response;
   try {
-    response = await fetch('/api/summarize', {
+    response = await fetch(API_BASE_URL + '/api/summarize', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url }),

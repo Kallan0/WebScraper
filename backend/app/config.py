@@ -1,6 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,6 +12,12 @@ class Settings(BaseSettings):
     groq_api_key: SecretStr = SecretStr('')
     groq_model: str = 'openai/gpt-oss-20b'
     frontend_url: str = 'http://localhost:5173'
+
+    @field_validator('frontend_url')
+    @classmethod
+    def normalize_frontend_origin(cls, value: str) -> str:
+        return value.strip().rstrip('/')
+
     request_timeout: float = Field(default=20.0, gt=0)
     groq_timeout: float = Field(default=30.0, gt=0)
     max_response_bytes: int = Field(default=10_000_000, gt=0)
