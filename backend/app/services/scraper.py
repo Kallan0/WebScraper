@@ -1,5 +1,6 @@
 import asyncio
 import ssl
+import logging
 from dataclasses import dataclass
 from urllib.parse import urljoin
 
@@ -37,7 +38,7 @@ async def _fetch(client: httpx.AsyncClient, url: str, settings: Settings) -> Scr
         host = httpx.URL(destination.url).netloc.decode('ascii')
         async with client.stream(
             'GET', pinned,
-            headers={'Host': host, 'User-Agent': 'AIWebScraper/0.1',
+            headers={'Host': host, 'User-Agent': settings.scraper_user_agent,
                      'Accept': 'text/html,application/xhtml+xml', 'Accept-Encoding': 'gzip, deflate'},
             extensions={'sni_hostname': destination.hostname},
         ) as response:
@@ -48,7 +49,20 @@ async def _fetch(client: httpx.AsyncClient, url: str, settings: Settings) -> Scr
                 url = urljoin(destination.url, location)
                 continue
             if response.status_code >= 400:
-                raise PipelineError(502, 'Unable to fetch this webpage. The website returned an error.')
+                logging.getLogger(__name__).warning(
+                    'Website fetch failed: host=%s status=%s', destination.hostname, response.status_code,
+                )
+                if response.status_code in {401, 403}:
+                    raise PipelineError(502,
+                        f'The website denied access (HTTP {response.status_code}). It may require sign-in '
+                        'or block automated requests from hosting providers. Try another public source.')
+                if response.status_code == 429:
+                    raise PipelineError(429,
+                        'The website is rate-limiting requests (HTTP 429). Wait before trying again.')
+                if response.status_code == 404:
+                    raise PipelineError(422, 'The webpage was not found (HTTP 404). Check the article URL.')
+                raise PipelineError(502,
+                    f'The website returned HTTP {response.status_code}. Please try again later.')
             if not 200 <= response.status_code < 300:
                 raise PipelineError(502, 'The website returned an unsupported response.')
             content_type = response.headers.get('content-type', '').split(';')[0].strip().lower()

@@ -144,3 +144,9 @@ Use the backend origin only: do not append /api, /docs or /api/summarize. Set ba
 For https://web-scraper-pearl-iota.vercel.app, set Vercel Root Directory to frontend, Framework Preset to Vite, Build Command to npm run build, Output Directory to dist, and use Node.js 24. The committed frontend/.env.production points to https://webscraper-e54n.onrender.com. If Vercel also has VITE_API_BASE_URL set in its dashboard, make sure it matches that origin; the host variable overrides the file. Redeploy Vercel after pushing these changes.
 
 On the Render backend, set FRONTEND_URL=https://web-scraper-pearl-iota.vercel.app in the Environment page. No trailing path is needed. Redeploy after changing it.
+
+## Website access errors after deployment
+
+A working browser URL can still return 401/403 to a hosted backend. These errors occur before text extraction or Groq. The API now includes the upstream HTTP status and Render logs include the website hostname and status (without full URLs or request secrets). 429 means the source website is rate-limiting; 404 means the requested page was not found.
+
+SCRAPER_USER_AGENT identifies the application with a source/contact URL, following [Wikimedia User-Agent policy](https://foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_User-Agent_Policy). This does not guarantee access: a website may still deny requests from a cloud provider. If denied, use another permitted public source or request access from the site operator; retries and larger content limits do not fix access restrictions.

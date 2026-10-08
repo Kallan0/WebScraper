@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     groq_api_key: SecretStr = SecretStr('')
     groq_model: str = 'openai/gpt-oss-20b'
     frontend_url: str = 'http://localhost:5173'
+    scraper_user_agent: str = 'AIWebScraper/0.1 (https://github.com/Kallan0/WebScraper)'
 
     @field_validator('frontend_url')
     @classmethod

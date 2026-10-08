@@ -60,7 +60,7 @@ async def test_fetch_pins_ip_preserving_host_and_tls(monkeypatch):
 
 
 @pytest.mark.parametrize(('response', 'status'), [
-    (httpx.Response(404), 502),
+    (httpx.Response(404), 422),
     (httpx.Response(200, headers={'content-type': 'application/pdf'}), 422),
     (httpx.Response(200, headers={'content-type': 'text/html'}, content=b'A' * 101), 422),
     (httpx.Response(200, headers={'content-type': 'text/html', 'content-length': '101'}), 422),
@@ -126,3 +126,22 @@ async def test_tls_failure_is_useful_error(monkeypatch):
     with pytest.raises(PipelineError) as error:
         await scraper.fetch_page('https://example.com', Settings())
     assert error.value.status_code == 502
+
+
+@pytest.mark.parametrize(('upstream_status', 'api_status', 'message'), [
+    (403, 502, 'denied access'), (401, 502, 'denied access'),
+    (429, 429, 'rate-limiting'), (500, 502, 'HTTP 500'),
+])
+async def test_upstream_status_is_explained(upstream_status, api_status, message, monkeypatch, caplog):
+    with pytest.raises(PipelineError) as error:
+        await fetch_mock(lambda request: httpx.Response(upstream_status), monkeypatch)
+    assert error.value.status_code == api_status
+    assert message in error.value.message
+    assert f'status={upstream_status}' in caplog.text
+
+
+async def test_identifying_user_agent(monkeypatch):
+    def handler(request):
+        assert request.headers['User-Agent'] == 'TestScraper/1.0 (https://example.com/contact)'
+        return httpx.Response(200, headers={'content-type': 'text/html'}, text='<p>Content</p>')
+    await fetch_mock(handler, monkeypatch, scraper_user_agent='TestScraper/1.0 (https://example.com/contact)')
